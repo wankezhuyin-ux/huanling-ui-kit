@@ -1,0 +1,4 @@
+.DS_Store
+10_生成脚本/out/
+10_生成脚本/build/__pycache__/
+*.pyc

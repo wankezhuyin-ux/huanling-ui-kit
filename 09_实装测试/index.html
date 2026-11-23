@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>幻灵归虚 · UI 套图实装测试台</title>
+<style>
+  :root{
+    --ink:#1d2a26; --mut:#6b7671; --line:#dcd6c8; --paper:#f7f4ec;
+    --gold:#a8802a; --bg:#eceae3; --panel:#fffdf8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:13px/1.55 -apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding:18px 26px 14px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  }
+  header h1{margin:0; font-size:17px; letter-spacing:.08em; font-weight:600}
+  header .sub{color:var(--mut); font-size:12px}
+  header .sp{flex:1}
+  .kbd{font:11px/1 ui-monospace,Menlo,monospace; border:1px solid var(--line);
+       border-radius:4px; padding:3px 5px; color:var(--mut); background:#fff}
+  #launch{appearance:none; border:1px solid #2f4a3f; background:#2f4a3f; color:#f6f1e2;
+       font:12.5px/1 inherit; letter-spacing:.06em; padding:9px 15px; border-radius:6px;
+       cursor:pointer}
+  #launch:hover{background:#3a5b4d}
+
+  main{flex:1; display:flex; min-height:0}
+  /* ---------------- 手机舞台 ---------------- */
+  #viewport{
+    flex:1; min-width:0; display:flex; align-items:center; justify-content:center;
+    padding:22px; overflow:auto;
+    background:
+      radial-gradient(circle at 50% 30%, #f7f5f0 0%, #e7e4dc 70%, #ddd9cf 100%);
+  }
+  #phone{
+    position:relative; border-radius:26px; overflow:hidden;
+    box-shadow:0 24px 60px rgba(30,40,36,.22), 0 0 0 1px rgba(0,0,0,.06),
+               0 0 0 9px #23282a, 0 0 0 10px #3a4144;
+    background:#0f1413; flex:0 0 auto;
+  }
+  #stage{
+    position:absolute; left:0; top:0; transform-origin:0 0; overflow:hidden;
+    background:#cfd8d2;
+  }
+  .layer{position:absolute; left:0; top:0; width:100%; height:100%}
+  .el{position:absolute}
+  .el img{display:block; width:100%; height:100%}
+  .el .p{position:absolute; background-repeat:no-repeat}
+  .t{position:absolute; white-space:nowrap; pointer-events:none}
+  .shadow{text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .hot{cursor:pointer}
+  .hot:hover{filter:brightness(1.07)}
+  .hot:active{transform:translateY(1px)}
+
+  /* 概念图叠加 */
+  #ghost{position:absolute; left:0; top:0; opacity:0; pointer-events:none;
+         transition:opacity .18s ease; mix-blend-mode:normal}
+  /* 九宫格参考线 */
+  #guides{position:absolute; left:0; top:0; opacity:0; pointer-events:none;
+          transition:opacity .18s ease}
+  /* 安全区 */
+  #safe{position:absolute; left:0; top:0; opacity:0; pointer-events:none}
+  /* 棋盘 */
+  #stage.checker{
+    background-image:linear-gradient(45deg,#e4e2da 25%,transparent 25%),
+      linear-gradient(-45deg,#e4e2dc 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#e4e2da 75%),
+      linear-gradient(-45deg,transparent 75%,#e4e2da 75%);
+    background-size:22px 22px; background-position:0 0,0 11px,11px -11px,-11px 0;
+  }
+  .badge{position:absolute; right:6px; top:6px; font-size:10px; padding:2px 6px;
+         border-radius:3px; background:rgba(210,60,50,.92); color:#fff;
+         letter-spacing:.02em; display:none}
+  #stage.mark .badge{display:block}
+  #stage.mark .bad{outline:2px solid rgba(220,60,50,.9); outline-offset:1px}
+
+  /* ---------------- 控制栏 ---------------- */
+  aside{
+    width:308px; flex:0 0 308px; background:var(--panel);
+    border-left:1px solid var(--line); padding:18px 18px 30px;
+    overflow:auto;
+  }
+  aside h2{font-size:11px; letter-spacing:.16em; color:var(--mut);
+           margin:20px 0 9px; font-weight:600; text-transform:uppercase}
+  aside h2:first-child{margin-top:0}
+  .seg{display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden}
+  .seg button{
+    flex:1; border:0; background:#fff; color:var(--ink); padding:8px 4px;
+    font:12px/1 inherit; cursor:pointer; border-right:1px solid var(--line);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--ink); color:#fdfbf4}
+  .row{display:flex; align-items:center; justify-content:space-between;
+       gap:10px; padding:7px 0; font-size:12.5px}
+  .row label{color:#39443f}
+  input[type=range]{width:130px; accent-color:#3d6b58}
+  .val{font:11px/1 ui-monospace,Menlo,monospace; color:var(--mut); min-width:44px; text-align:right}
+  .chk{display:flex; align-items:center; gap:7px; padding:6px 0; font-size:12.5px; cursor:pointer}
+  .chk input{accent-color:#3d6b58}
+  .note{font-size:11.5px; color:var(--mut); line-height:1.6; margin-top:8px}
+  .issues{margin-top:6px; border-top:1px dashed var(--line); padding-top:10px}
+  .issue{font-size:12px; padding:7px 0; border-bottom:1px dashed #eee9dd; cursor:pointer}
+  .issue b{display:block; font-weight:600; color:#b4402f}
+  .issue span{color:var(--mut); font-size:11.5px}
+  .issue.dim b{color:#6b7671}
+  .foot{margin-top:18px; font-size:11px; color:#9aa19c; line-height:1.7}
+  kbd.t{background:#f0ece2; border-radius:3px; padding:1px 4px; font-size:10.5px}
+
+  /* 直出截图模式 ?shot=1 */
+  body.shot{display:block; background:#fff}
+  body.shot header, body.shot aside{display:none}
+  body.shot #viewport{padding:0; overflow:hidden; background:#fff; display:block}
+  body.shot #phone{border-radius:0; box-shadow:none}
+
+  /* ---------------- 游戏模式 ?play=1 ---------------- */
+  body.play{background:#080b0a; overflow:hidden}
+  body.play header, body.play aside{display:none}
+  body.play #viewport{padding:0; overflow:hidden; background:#080b0a}
+  body.play #phone{border-radius:0; box-shadow:none; background:#080b0a}
+  #boot{position:fixed; inset:0; z-index:90; display:none; cursor:pointer;
+        align-items:center; justify-content:center; flex-direction:column;
+        background:#0a0f0d; transition:opacity .55s ease}
+  body.play #boot{display:flex}
+  #boot::before{content:''; position:absolute; inset:-40px;
+        background:url("../00_参考/C_city.jpg") center/cover no-repeat;
+        filter:blur(16px) saturate(.75) brightness(.42); transform:scale(1.06)}
+  #boot::after{content:''; position:absolute; inset:0;
+        background:radial-gradient(circle at 50% 45%, rgba(12,20,17,.20) 0%, rgba(8,12,10,.86) 78%)}
+  #boot .bt{position:relative; z-index:2; text-align:center; color:#e6dcc0}
+  #boot .b1{font-size:min(11vw,86px); letter-spacing:.34em; text-indent:.34em;
+        font-family:"Songti SC","STSong","Hiragino Mincho ProN",serif;
+        text-shadow:0 2px 26px rgba(214,178,96,.35)}
+  #boot .b2{margin-top:14px; font-size:min(1.7vw,12px); letter-spacing:.42em;
+        color:#9d9481; font-family:ui-monospace,Menlo,monospace}
+  #boot .b3{margin-top:min(16vh,120px); font-size:min(2.4vw,15px); letter-spacing:.5em;
+        text-indent:.5em; color:#cfc3a2; animation:breathe 2.4s ease-in-out infinite}
+  @keyframes breathe{0%,100%{opacity:.52}50%{opacity:1}}
+  #boot.off{opacity:0; pointer-events:none}
+  #exitTip{position:fixed; right:14px; bottom:14px; z-index:80; display:none;
+     font:11px/1 -apple-system,"PingFang SC",sans-serif; color:rgba(240,235,220,.46);
+     border:1px solid rgba(240,235,220,.18); border-radius:20px; padding:7px 13px;
+     cursor:pointer; background:rgba(10,15,13,.35); backdrop-filter:blur(4px)}
+  body.play #exitTip{display:block}
+  #exitTip:hover{color:#efe9d6; border-color:rgba(240,235,220,.4)}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>幻灵归虚 · UI 套图实装测试台</h1>
+  <span class="sub">素材按引擎方式装配：九宫格拉伸 · 文字另起一层 · 1:1 原生尺寸</span>
+  <span class="sp"></span>
+  <button id="launch">▶ 启动游戏</button>
+  <span class="sub">拖动滑杆改变尺寸，看描边与装饰会不会被拉坏</span>
+</header>
+
+<main>
+  <div id="viewport">
+    <div id="phone"><div id="stage"></div></div>
+  </div>
+
+  <aside>
+    <h2>页面</h2>
+    <div class="seg" id="segScreen">
+      <button data-s="battle" class="on">战斗</button>
+      <button data-s="pet">灵兽</button>
+      <button data-s="city">主城</button>
+    </div>
+
+    <h2>显示</h2>
+    <label class="chk"><input type="checkbox" id="cBg"> 用原画当场景底（模拟真实对局）</label>
+    <label class="chk"><input type="checkbox" id="cGhost"> 叠加概念图（对齐校验）</label>
+    <label class="chk"><input type="checkbox" id="cGuides"> 九宫格切边线</label>
+    <label class="chk"><input type="checkbox" id="cChecker"> 棋盘底（看 alpha 边缘）</label>
+    <label class="chk"><input type="checkbox" id="cMark"> 标出已知问题件</label>
+    <label class="chk"><input type="checkbox" id="cSafe" checked> 安全区内缩 24px</label>
+
+    <h2>运行参数</h2>
+    <div class="row"><label>画布缩放</label><input type="range" id="rScale" min="0.28" max="0.62" step="0.01" value="0.42"><span class="val" id="vScale">0.42</span></div>
+    <div class="row"><label>横向拉伸</label><input type="range" id="rStretch" min="-0.15" max="0.35" step="0.01" value="0"><span class="val" id="vStretch">0%</span></div>
+    <div class="row"><label>当前血量</label><input type="range" id="rHp" min="0" max="100" step="1" value="86"><span class="val" id="vHp">86%</span></div>
+    <div class="row"><label>设备像素比提示</label><span class="val">1x 素材</span></div>
+    <p class="note">源素材出自 1x 截图，画布放到 2x 设备上会软；此台按 1:1 展示，仅验证装配关系与九宫格行为。</p>
+
+    <h2>已知问题（点击定位）</h2>
+    <div class="issues" id="issues"></div>
+
+    <p class="foot">
+      快捷键：<kbd class="t">1</kbd>/<kbd class="t">2</kbd>/<kbd class="t">3</kbd> 切页 ·
+      <kbd class="t">G</kbd> 概念图 · <kbd class="t">L</kbd> 切边线
+    </p>
+  </aside>
+</main>
+
+<div id="boot">
+  <div class="bt">
+    <div class="b1">幻灵归虚</div>
+    <div class="b2">HUAN LING GUI XU</div>
+    <div class="b3">点 击 进 入</div>
+  </div>
+</div>
+<div id="exitTip">退出游戏 · 回测试台</div>
+
+<script>
+/* =====================================================================
+   1. 素材清单（尺寸/切边取自 九宫格切边.json，1:1 原生）
+   ===================================================================== */
+const DIR = {
+  plate:'../01_底板/', panel:'../02_面板/', bar:'../03_进度条/',
+  btn:'../04_按钮/', cir:'../05_圆形/', art:'../07_写实件/'
+};
+const M = {
+  banner_scene   :{f:DIR.plate+'banner_scene.png',   w:441,h:65,  l:112,r:112,t:0,b:0},
+  plate_name_self:{f:DIR.plate+'plate_name_self.png',w:206,h:48,  l:24, r:24, t:0,b:0},
+  plate_name_enemy:{f:DIR.plate+'plate_name_enemy.png',w:236,h:48,l:24, r:24, t:0,b:0},
+  plate_char     :{f:DIR.plate+'plate_char.png',     w:172,h:86,  l:0,  r:0,  t:0,b:0},
+  tab_nav_on     :{f:DIR.plate+'tab_nav_on.png',     w:147,h:63,  l:26, r:26, t:0,b:0},
+  tab_nav_off    :{f:DIR.plate+'tab_nav_off.png',    w:141,h:52,  l:24, r:24, t:0,b:0},
+  tab_on         :{f:DIR.plate+'tab_on.png',         w:252,h:71,  l:30, r:30, t:0,b:0},
+  plate_pet      :{f:DIR.plate+'plate_pet.png',      w:245,h:64,  l:26, r:26, t:0,b:0},
+  plate_skill    :{f:DIR.plate+'plate_skill.png',    w:237,h:60,  l:26, r:26, t:0,b:0},
+  tag_vertical   :{f:DIR.plate+'tag_vertical.png',   w:57, h:222, l:0,  r:0,  t:0,b:0},
+  panel_paper    :{f:DIR.panel+'panel_paper.png',    w:880,h:200, l:32, r:32, t:32,b:32},
+  panel_main     :{f:DIR.panel+'panel_main.png',     w:837,h:733, l:40, r:40, t:40,b:40},
+  panel_infobar  :{f:DIR.panel+'panel_infobar.png',  w:812,h:144, l:0,  r:0,  t:0,b:0},
+  paper_fill     :{f:DIR.panel+'paper_fill.png',     w:160,h:100, l:0,  r:0,  t:0,b:0},
+  bar_hp         :{f:DIR.bar+'bar_hp.png',           w:218,h:25,  l:18, r:24, t:0,b:0},
+  bar_track      :{f:DIR.bar+'bar_track.png',        w:218,h:25,  l:18, r:24, t:0,b:0},
+  btn_gold       :{f:DIR.btn+'btn_gold.png',         w:305,h:70,  l:101,r:40, t:0,b:0},
+  btn_x2         :{f:DIR.btn+'btn_x2.png',           w:154,h:63,  l:20, r:20, t:0,b:0},
+  btn_log        :{f:DIR.btn+'btn_log.png',          w:231,h:69,  l:77, r:26, t:0,b:0},
+  btn_train      :{f:DIR.btn+'btn_train.png',        w:333,h:76,  l:92, r:92, t:0,b:0},
+  btn_func       :{f:DIR.btn+'btn_func.png',         w:71, h:71,  l:22, r:22, t:22,b:22},
+  avatar_self    :{f:DIR.cir+'avatar_self.png',      w:167,h:167, l:0,  r:0,  t:0,b:0},
+  icon_skill     :{f:DIR.cir+'icon_skill.png',       w:203,h:203, l:0,  r:0,  t:0,b:0},
+  avatar_char    :{f:DIR.art+'avatar_char.png',      w:220,h:220, l:0,  r:0,  t:0,b:0},
+  avatar_enemy   :{f:DIR.art+'avatar_enemy.png',     w:220,h:220, l:0,  r:0,  t:0,b:0},
+  icon_洞府       :{f:DIR.art+'icon_nav_洞府.png',    w:200,h:200, l:0,  r:0,  t:0,b:0},
+  icon_历练       :{f:DIR.art+'icon_nav_历练.png',    w:200,h:200, l:0,  r:0,  t:0,b:0},
+  icon_灵兽       :{f:DIR.art+'icon_nav_灵兽.png',    w:200,h:200, l:0,  r:0,  t:0,b:0},
+  icon_行囊       :{f:DIR.art+'icon_nav_行囊.png',    w:200,h:200, l:0,  r:0,  t:0,b:0},
+  pet1           :{f:DIR.art+'pet_art1.png',         w:240,h:179, l:0,  r:0,  t:0,b:0},
+  pet2           :{f:DIR.art+'pet_art2.png',         w:240,h:179, l:0,  r:0,  t:0,b:0},
+  pet3           :{f:DIR.art+'pet_art3.png',         w:240,h:179, l:0,  r:0,  t:0,b:0},
+  pet4           :{f:DIR.art+'pet_art4.png',         w:240,h:179, l:0,  r:0,  t:0,b:0},
+};
+
+const state = {screen:'battle', ghost:false, guides:false, checker:false, mark:false,
+               safe:true, scale:0.42, stretch:0, hp:86, bgMode:'plain', play:false};
+
+/* =====================================================================
+   2. 九宫格渲染（逐块缩放，代替引擎的 9-slice）
+   ===================================================================== */
+function el(cls){
+  const d = document.createElement('div');
+  d.className = 'el' + (cls ? ' ' + cls : '');
+  return d;
+}
+function uniq(a){ return a.filter((v,i)=>a.indexOf(v)===i); }
+
+function nine(name, x, y, w, h, opt={}){
+  const m = M[name];
+  if(!m){ console.warn('missing', name); return el(); }
+  const k = opt.k === undefined ? 1 : opt.k;
+  // 横向拉伸系数只作用于「中间段」，装饰段保持原宽
+  const ex = Math.round((w - m.w) * (opt.sx === undefined ? 1 : opt.sx));
+  const W = m.w + ex, H = h;
+
+  const sx = uniq([0, m.l, m.w - m.r, m.w]);
+  const sy = uniq([0, m.t, m.h - m.b, m.h]);
+  const dx = uniq([0, m.l, W - m.r, W]);
+  const dy = uniq([0, m.t, H - m.b, H]);
+
+  const box = el();
+  box.style.cssText = `left:${x}px;top:${y}px;width:${W}px;height:${H}px;`;
+  if(opt.issue) box.classList.add('bad');
+  if(opt.cls) box.className += ' ' + opt.cls;
+
+  for(let i=0;i<sx.length-1;i++){
+    for(let j=0;j<sy.length-1;j++){
+      const sw = sx[i+1]-sx[i], sh = sy[j+1]-sy[j];
+      const dw = dx[i+1]-dx[i], dh = dy[j+1]-dy[j];
+      if(sw<=0||sh<=0||dw<=0||dh<=0) continue;
+      const p = document.createElement('div');
+      p.className = 'p';
+      const kx = dw/sw, ky = dh/sh;
+      p.style.cssText =
+        `left:${dx[i]}px;top:${dy[j]}px;width:${dw}px;height:${dh}px;` +
+        `background-image:url("${m.f}");` +
+        `background-size:${m.w*kx}px ${m.h*ky}px;` +
+        `background-position:${-sx[i]*kx}px ${-sy[j]*ky}px;`;
+      box.appendChild(p);
+    }
+  }
+  return box;
+}
+
+/* 原生尺寸（不拉伸） */
+function pic(name, x, y, w, h, opt={}){
+  const m = M[name];
+  const d = el();
+  d.style.cssText = `left:${x}px;top:${y}px;width:${w||m.w}px;height:${h||m.h}px;`;
+  const im = document.createElement('img');
+  im.src = m.f; im.draggable = false;
+  if(opt.issue) d.classList.add('bad');
+  d.appendChild(im);
+  return d;
+}
+
+function txt(x, y, s, o={}){
+  const d = document.createElement('div');
+  d.className = 't';
+  const size = o.size || 22;
+  d.style.cssText =
+    `left:${x}px;top:${y}px;` +
+    `font-size:${size}px;` +
+    `font-family:${o.kai ? '"Songti SC","STSong","Hiragino Mincho ProN",serif'
+                          : '"PingFang SC","Hiragino Sans GB",sans-serif'};` +
+    `font-weight:${o.w || 400};` +
+    `color:${o.color || '#20302b'};` +
+    `letter-spacing:${o.ls || 0}px;` +
+    (o.w2 ? `width:${o.w2}px;white-space:normal;text-align:${o.align||'left'};` : '') +
+    (o.center ? 'transform:translateX(-50%);' : '') +
+    (o.op ? `opacity:${o.op};` : '');
+  d.textContent = s;
+  return d;
+}
+
+function pill(x, y, w, h, o={}){
+  const d = el();
+  d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${h/2}px;` +
+    `background:${o.bg || 'rgba(20,40,34,.62)'};` +
+    `border:1px solid ${o.bd || 'rgba(214,188,120,.55)'};` +
+    (o.blur ? 'backdrop-filter:blur(2px);' : '');
+  return d;
+}
+
+/* =====================================================================
+   3. 三张页面
+   ===================================================================== */
+const stage = document.getElementById('stage');
+let SCREEN_W = 900, SCREEN_H = 1750;
+
+function clear(){ stage.innerHTML = ''; }
+
+/* ---------- 通用顶部状态栏 ---------- */
+function hudTop(o={}){
+  const L = document.createDocumentFragment();
+  if(!o.noTitle) L.appendChild(txt(22, 12, '幻灵归虚', {size:20, kai:true, color:'#2d3a33', ls:2, op:.85}));
+  const items = o.items || [];
+  let rx = o.right || 860;
+  items.forEach(it => {
+    const w = 96;
+    rx -= w;
+    L.appendChild(pill(rx, 8, w, 30, {bg:'rgba(255,255,255,.30)', bd:'rgba(160,150,120,.45)'}));
+    L.appendChild(txt(rx + 12, 14, it[0], {size:15, color:'#3a4a42'}));
+    L.appendChild(txt(rx + 62, 14, it[1] ? '＋' : '', {size:15, color:'#8a7530'}));
+    rx -= 12;
+  });
+  return L;
+}
+
+/* ---------- 底部导航 ---------- */
+const NAVW = 900;
+function navBar(o={}){
+  const frag = document.createDocumentFragment();
+  const active = o.active; // 0..3
+  const labels = ['洞府','历练','灵兽','行囊'];
+  const icons  = ['icon_洞府','icon_历练','icon_灵兽','icon_行囊'];
+  // 实测：图标圆心 x = 123/333/558/771，直径 144/162/145/152
+  const CX = [123, 333, 558, 771];
+  const DD = [144, 164, 145, 152];
+  const PW = [124, 147, 128, 127];
+  const scale = (+stage.dataset.w) / 900;
+  const ox = o.ox || 0;
+  const cy = (o.cy || 1610);
+  const py = (o.py || 1662);
+
+  // 底板暗压
+  const veil = el();
+  veil.style.cssText = `left:0;top:${cy - 130}px;width:${stage.dataset.w}px;height:250px;` +
+    `background:linear-gradient(180deg,rgba(20,45,38,0) 0%,rgba(20,45,38,.08) 45%,rgba(16,38,32,.20) 100%);`;
+  frag.appendChild(veil);
+
+  for(let i=0;i<4;i++){
+    const d = DD[i] * scale;
+    const ic = pic(icons[i], ox + CX[i]*scale - d/2, cy - d/2, d, d);
+    ic.style.cssText += ';border-radius:50%;overflow:hidden;';
+    ic.classList.add('hot');
+    ic.dataset.nav = i;
+    frag.appendChild(ic);
+  }
+  for(let i=0;i<4;i++){
+    const on = i === active;
+    const w = PW[i] * scale, h = on ? 63 : 50;
+    const y = on ? py - 4 : py + 3;
+    const plate = on
+      ? nine('tab_nav_on', ox + CX[i]*scale - w/2, y, w, h, {sx:0})
+      : nine('tab_nav_off', ox + CX[i]*scale - w/2, y, w, h, {sx:0});
+    plate.classList.add('hot');
+    plate.dataset.nav = i;
+    frag.appendChild(plate);
+    const t = txt(ox + CX[i]*scale, y + (on ? 15 : 13), labels[i], {
+      size:on ? 28 : 25, kai:true, color: on ? '#513a14' : '#4c3a1c', center:true, w:600});
+    t.style.transform = 'translateX(-50%)';
+    frag.appendChild(t);
+  }
+  return frag;
+}
+
+/* ---------- 战斗页 ---------- */
+function screenBattle(){
+  SCREEN_W = 900; SCREEN_H = 1750;
+  const f = document.createDocumentFragment();
+
+  // 背景（纯色时的占位渐变）
+  const bg = el();
+  bg.style.cssText = `left:0;top:0;width:900px;height:1750px;` +
+    `background:linear-gradient(180deg,#cfe0dc 0%,#dbe6dc 34%,#cfdccf 58%,#c3d3c8 100%);`;
+  f.appendChild(bg);
+
+  f.appendChild(hudTop({items:[['3600','+'],['1280','+'],['56万','+']], noTitle:true}));
+
+  f.appendChild(nine('banner_scene', 224, 93, 441, 65));
+  f.appendChild(txt(444, 105, '东码头 · 竹影渡', {size:28, kai:true, color:'#e9e0c2', center:true, ls:3}));
+
+  // 我方
+  f.appendChild(nine('plate_name_self', 160, 182, 236, 50));
+  f.appendChild(txt(180, 193, '林疏月', {size:22, color:'#eae4cd', w:600}));
+  f.appendChild(txt(262, 197, 'Lv.28', {size:14, color:'#c9c6a8'}));
+  f.appendChild(pic('avatar_self', 5, 149, 167, 167));
+
+  // 敌方
+  f.appendChild(nine('plate_name_enemy', 508, 183, 236, 48));
+  f.appendChild(txt(532, 194, '水泽妖', {size:21, color:'#eae4cd', w:600}));
+  f.appendChild(txt(600, 198, 'Lv.27', {size:14, color:'#c9c6a8'}));
+  f.appendChild(pic('avatar_enemy', 740, 152, 150, 150));
+
+  // 血条（拉伸到 218 → 各自宽度）
+  const st = state.stretch;
+  const hpW1 = Math.round(226 * (1 + st * 0.4));
+  const hpW2 = Math.round(242 * (1 + st * 0.4));
+  f.appendChild(nine('bar_track', 156, 262, hpW1, 25, {issue:false}));
+  const hpWrap = el();
+  hpWrap.style.cssText = `left:156px;top:262px;width:${Math.round(hpW1*state.hp/100)}px;height:25px;overflow:hidden;`;
+  const hpIn = nine('bar_hp', 0, 0, hpW1, 25);
+  hpWrap.appendChild(hpIn);
+  f.appendChild(hpWrap);
+  if(state.bgMode === 'plain') f.appendChild(txt(160, 267, '2860/3200', {size:14, color:'#f0f5e8', op:.95}));
+
+  f.appendChild(nine('bar_track', 518, 268, hpW2, 25));
+  const hpWrap2 = el();
+  hpWrap2.style.cssText = `left:518px;top:268px;width:${Math.round(hpW2*Math.max(0,state.hp-28)/100)}px;height:25px;overflow:hidden;`;
+  hpWrap2.appendChild(nine('bar_hp', 0, 0, hpW2, 25));
+  f.appendChild(hpWrap2);
+  if(state.bgMode === 'plain') f.appendChild(txt(522, 273, '1840/2600', {size:14, color:'#f0f5e8', op:.95}));
+
+  // 战报面板：纸面垫在「边框环」下面，环内部透明处直接透出纸面，没有接缝
+  const fill = el();
+  fill.style.cssText = `left:8px;top:1152px;width:880px;height:200px;` +
+    `background:url("${M.paper_fill.f}") repeat;`;
+  f.appendChild(fill);
+  f.appendChild(nine('panel_paper', 8, 1152, 880, 200));
+  const logs = [
+    ['【15:26:07】', '归铃白鹿发动合击！'],
+    ['【15:26:07】', '林疏月与归铃白鹿默契相合，联手重创水泽妖，', '造成 368 点伤害！'],
+    ['【15:26:07】', '水泽妖受到重创，气息不稳！'],
+  ];
+  let ly = 1200;
+  logs.forEach((L, i) => {
+    f.appendChild(txt(52, ly, '◇', {size:15, color:'#8a7530'}));
+    f.appendChild(txt(74, ly - 2, L[0], {size:16, color:'#3f5348'}));
+    f.appendChild(txt(222, ly - 2, L[1], {size:17, color:'#26433a'}));
+    if(L[2]) f.appendChild(txt(222, ly + 24, L[2], {size:17, color:'#26433a'}));
+    ly += L[2] ? 74 : 38;
+  });
+
+  // 按钮行（横向拉伸滑杆作用于此）
+  const gW = Math.round(305 * (1 + st));
+  f.appendChild(nine('btn_gold', 61, 1394, gW, 70));
+  f.appendChild(txt(61 + gW/2, 1413, '自动战斗', {size:24, kai:true, color:'#4e3410', center:true}));
+
+  const xW = Math.round(154 * (1 + st * 0.8));
+  f.appendChild(nine('btn_x2', 409 - (xW-154)/2, 1398, xW, 63));
+  f.appendChild(txt(409 - (xW-154)/2 + xW/2, 1414, '×2', {size:24, color:'#4e3410', center:true}));
+
+  const lW = Math.round(231 * (1 + st));
+  f.appendChild(nine('btn_log', 607, 1395, lW, 69));
+  f.appendChild(txt(607 + lW/2, 1413, '战报', {size:24, kai:true, color:'#4e3410', center:true}));
+
+  f.appendChild(navBar({active:1}));
+  return {f, w:SCREEN_W, h:SCREEN_H};
+}
+
+/* ---------- 灵兽页 ---------- */
+function screenPet(){
+  SCREEN_W = 900; SCREEN_H = 1846;
+  const f = document.createDocumentFragment();
+  const ox = 24; // 852 居中
+
+  const bg = el();
+  bg.style.cssText = `left:0;top:0;width:900px;height:1846px;` +
+    `background:linear-gradient(180deg,#dfe9e2 0%,#e6ece2 40%,#efeade 62%,#e6dfd0 100%);`;
+  f.appendChild(bg);
+
+  f.appendChild(hudTop({items:[['4120','+'],['28680','+']], right:828, noTitle:true}));
+
+  // 左上角色（坐标实测自原画：头像 8,58 直径 94）
+  f.appendChild(pic('avatar_char', ox + 6, 56, 100, 100));
+  f.appendChild(txt(ox + 110, 94, '剑清瑶', {size:30, kai:true, color:'#22392f'}));
+  f.appendChild(txt(ox + 252, 102, 'Lv.58', {size:18, color:'#6f7a64'}));
+
+  // 右上返回条（原画实测 665,92 165×43）
+  f.appendChild(pill(ox + 665, 92, 165, 43, {bg:'rgba(30,58,48,.66)', bd:'rgba(210,185,120,.35)'}));
+  f.appendChild(txt(ox + 748, 102, '东码头', {size:20, color:'#efe8d2', center:true}));
+
+  // 灵兽名牌（原画实测 522,670 300×50）
+  f.appendChild(nine('plate_pet', ox + 522, 668, 300, 52));
+  f.appendChild(txt(ox + 672, 682, '归铃白鹿 · Lv.28', {size:22, kai:true, color:'#3c4a3c', center:true}));
+  f.appendChild(pill(ox + 596, 735, 172, 36, {bg:'rgba(28,54,44,.55)', bd:'rgba(206,180,110,.5)'}));
+  f.appendChild(txt(ox + 682, 742, '已出战', {size:18, color:'#e2dcc4', center:true}));
+
+  // 主面板 + 纸面填充
+  const pfill = el();
+  pfill.style.cssText = `left:${ox + 8}px;top:897px;width:837px;height:733px;` +
+    `background:url("${M.paper_fill.f}") repeat;`;
+  f.appendChild(pfill);
+  f.appendChild(nine('panel_main', ox + 8, 897, 837, 733));
+
+  // 页签
+  f.appendChild(txt(ox + 196, 934, '属性', {size:28, kai:true, color:'#5b5240', center:true}));
+  f.appendChild(nine('tab_on', ox + 275, 925, 252, 71));
+  f.appendChild(txt(ox + 401, 938, '技能', {size:29, kai:true, color:'#f2ecd8', center:true}));
+  f.appendChild(txt(ox + 646, 934, '装备', {size:28, kai:true, color:'#5b5240', center:true}));
+
+  // 技能区
+  f.appendChild(pic('icon_skill', ox + 43, 1025, 203, 203));
+  f.appendChild(nine('plate_skill', ox + 258, 1046, 237, 60));
+  f.appendChild(txt(ox + 376, 1058, '白鹿照影', {size:24, kai:true, color:'#3f4c31', center:true}));
+  f.appendChild(txt(ox + 272, 1118, '鹿铃轻响，对目标造成一次灵力伤害。', {size:19, color:'#3d4a3c'}));
+
+  // 宠物四格
+  const cells = [[42,1285],[236,1285],[430,1285],[624,1285]];
+  cells.forEach((c, i) => {
+    const box = el();
+    box.style.cssText = `left:${ox + c[0]}px;top:${c[1]}px;width:178px;height:187px;` +
+      `outline:2px solid ${i===0 ? 'rgba(214,178,96,.95)' : 'rgba(160,150,120,.55)'};` +
+      `outline-offset:-1px;overflow:hidden;`;
+    const im = document.createElement('img');
+    im.src = M['pet' + (i+1)].f;
+    im.style.cssText = `width:100%;height:100%;object-fit:cover;display:block;`;
+    box.appendChild(im);
+    f.appendChild(box);
+  });
+
+  // 培养
+  f.appendChild(nine('btn_train', ox + 257, 1506, 333, 76));
+  f.appendChild(txt(ox + 424, 1524, '培养', {size:28, kai:true, color:'#4e3410', center:true}));
+
+  f.appendChild(navBar({active:2, ox:24, cy:1700, py:1764}));
+  return {f, w:SCREEN_W, h:SCREEN_H};
+}
+
+/* ---------- 主城页 ---------- */
+function screenCity(){
+  SCREEN_W = 900; SCREEN_H = 1748;
+  const f = document.createDocumentFragment();
+
+  const bg = el();
+  bg.style.cssText = `left:0;top:0;width:900px;height:1748px;` +
+    `background:linear-gradient(180deg,#cfe2d6 0%,#dfe9d8 38%,#e8e4cf 66%,#dfd9c4 100%);`;
+  f.appendChild(bg);
+
+  // 左上：头像 + 双层牌
+  f.appendChild(pic('avatar_char', 4, 6, 145, 145));
+  f.appendChild(nine('plate_name_enemy', 145, 16, 210, 58));
+  f.appendChild(txt(178, 27, '林疏月', {size:26, kai:true, color:'#efe8d0'}));
+  const lv = el();
+  lv.style.cssText = 'left:150px;top:84px;width:150px;height:34px;border-radius:17px;' +
+    'background:#efe6cf;border:1px solid #b99a55;box-shadow:0 1px 2px rgba(0,0,0,.18)';
+  f.appendChild(lv);
+  f.appendChild(txt(225, 90, '筑基三层', {size:18, kai:true, color:'#3b4a3a', center:true}));
+
+  // 右上资源
+  [['铜钱','12860'],['灵玉','320']].forEach((r, i) => {
+    const x = 470 + i * 210;
+    f.appendChild(pill(x, 16, 190, 38, {bg:'rgba(255,255,255,.34)', bd:'rgba(150,140,110,.4)'}));
+    f.appendChild(txt(x + 14, 22, r[0], {size:16, color:'#4a5a4e'}));
+    f.appendChild(txt(x + 72, 21, r[1], {size:19, color:'#31443a', w:600}));
+    f.appendChild(txt(x + 158, 21, '＋', {size:18, color:'#8a7530'}));
+  });
+
+  // 竖挂牌
+  f.appendChild(pic('tag_vertical', 40, 196, 57, 222));
+  f.appendChild(txt(40, 232, '洞\n府', {size:40, kai:true, color:'#efe9d3', w2:57, align:'center'}));
+
+  // 右侧功能圆钮
+  [['邮件', 189]].forEach((b, i) => {
+    f.appendChild(nine('btn_func', 792, b[1], 71, 71));
+    f.appendChild(txt(827, b[1] + 24, i ? '◈' : '✉', {size:26, color:'#6d5120', center:true}));
+    f.appendChild(txt(827, b[1] + 80, b[0], {size:17, color:'#e9e2cc', center:true}));
+    if(i === 0){
+      const dot = el();
+      dot.style.cssText = 'left:848px;top:186px;width:14px;height:14px;border-radius:50%;background:#d8422f;border:1px solid #f4e6c8;';
+      f.appendChild(dot);
+    }
+  });
+
+  // 底部信息条
+  f.appendChild(pic('panel_infobar', 8, 1318, 812, 144));
+  f.appendChild(txt(128, 1340, '东码头 · 竹影渡', {size:27, kai:true, color:'#2c4436', ls:2}));
+  f.appendChild(nine('btn_gold', 502, 1336, 305, 70));
+  f.appendChild(txt(680, 1354, '继续历练 ›', {size:23, kai:true, color:'#4e3410', center:true}));
+
+  f.appendChild(navBar({active:0}));
+  return {f, w:SCREEN_W, h:SCREEN_H};
+}
+
+/* =====================================================================
+   4. 装配 / 交互
+   ===================================================================== */
+const SCREENS = {battle:screenBattle, pet:screenPet, city:screenCity};
+const SIZES = {battle:[900,1750], pet:[900,1846], city:[900,1748]};
+
+function render(){
+  clear();
+  // 先定舞台尺寸：navBar 等组件在构建期就要读它
+  const [pw, ph] = SIZES[state.screen];
+  stage.dataset.w = pw;
+  stage.dataset.h = ph;
+  stage.style.width = pw + 'px';
+  stage.style.height = ph + 'px';
+
+  const s = SCREENS[state.screen]();
+  stage.dataset.w = s.w;
+  stage.style.width = s.w + 'px';
+  stage.style.height = s.h + 'px';
+  const ART = {battle:[899,1750], pet:[852,1846], city:[900,1748]};
+  const [aw, ah] = ART[state.screen];
+  if(state.bgMode !== 'plain'){
+    const bgim = document.createElement('img');
+    bgim.src = {battle:'../00_参考/A_battle.jpg', pet:'../00_参考/B_pet.jpg', city:'../00_参考/C_city.jpg'}[state.screen];
+    // 关键：按原画真实像素铺，不 cover —— cover 会把 852 拉到 900，横向错位 5.6%
+    bgim.style.cssText = `position:absolute;left:${(s.w-aw)/2}px;top:0;width:${aw}px;height:${ah}px;` +
+      (state.bgMode === 'soft'
+        ? 'filter:blur(13px) brightness(.52) saturate(1.18) contrast(1.06);transform:scale(1.1);'
+        : '');
+    stage.appendChild(bgim);
+  }
+  stage.appendChild(s.f);
+  if(state.bgMode !== 'plain'){
+    const g0 = stage.querySelector('.el');
+    if(g0) g0.style.display = 'none';   // 去掉占位渐变，露出底图
+  }
+
+  // 叠加概念图
+  const ghost = document.createElement('img');
+  ghost.id = 'ghost';
+  ghost.src = {battle:'../00_参考/A_battle.jpg', pet:'../00_参考/B_pet.jpg', city:'../00_参考/C_city.jpg'}[state.screen];
+  ghost.style.cssText = `position:absolute;left:${(s.w-aw)/2}px;top:0;width:${aw}px;height:${ah}px;opacity:${state.ghost?0.5:0};`;
+  stage.appendChild(ghost);
+
+  // 切边参考线（标出每个可拉伸件的左右切点）
+  const g = document.createElement('svg');
+  g.id = 'guides';
+  g.setAttribute('width', s.w); g.setAttribute('height', s.h);
+  g.style.cssText = `opacity:${state.guides?1:0}`;
+  g.innerHTML = `<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="rgba(160,40,30,.10)"/><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(160,40,30,.55)" stroke-width="2"/></pattern></defs>`;
+  g.innerHTML += `<rect x="0" y="0" width="0" height="0"/>`;
+  stage.appendChild(g);
+
+  // 安全检查边
+  const safe = document.createElement('div');
+  safe.id = 'safe';
+  safe.style.cssText = `left:24px;top:24px;width:${s.w-48}px;height:${s.h-48}px;` +
+    `border:1px dashed rgba(40,90,70,.5);opacity:${state.safe?1:0};`;
+  stage.appendChild(safe);
+
+  applyScale();
+  buildIssues();
+  paintGuides();
+}
+
+function paintGuides(){
+  const g = document.getElementById('guides');
+  if(!g) return;
+  const w = +stage.dataset.w;
+  let html = '';
+  // 给所有九宫格件画左右界线（从 DOM 读实际位置）
+  stage.querySelectorAll('.el').forEach(box => {
+    const left = parseFloat(box.style.left), top = parseFloat(box.style.top);
+    const bw = parseFloat(box.style.width), bh = parseFloat(box.style.height);
+    if(!bw || !bh) return;
+    // 找出内部 patch 的最小/最大边界作为切点
+    const patches = [...box.children].filter(c => c.classList.contains('p'));
+    if(patches.length < 6) return; // 非九宫格
+    const xs = patches.map(p => parseFloat(p.style.left));
+    const rxs = patches.map(p => parseFloat(p.style.left) + parseFloat(p.style.width));
+    const x1 = Math.min(...xs.filter(v => v > 0.5));
+    const x2 = Math.max(...rxs.filter(v => v < bw - 0.5));
+    if(!isFinite(x1) || !isFinite(x2)) return;
+    html += `<line x1="${left+x1}" y1="${top}" x2="${left+x1}" y2="${top+bh}" stroke="rgba(190,60,40,.85)" stroke-width="1" stroke-dasharray="4 3"/>`;
+    html += `<line x1="${left+x2}" y1="${top}" x2="${left+x2}" y2="${top+bh}" stroke="rgba(190,60,40,.85)" stroke-width="1" stroke-dasharray="4 3"/>`;
+    html += `<rect x="${left+x1}" y="${top}" width="${Math.max(0,x2-x1)}" height="${bh}" fill="url(#hatch)" opacity=".55"/>`;
+  });
+  g.innerHTML = g.innerHTML.split('</defs>')[0] + '</defs>' + html;
+}
+
+function applyScale(){
+  const phone = document.getElementById('phone');
+  const w = +stage.dataset.w || 900, h = +stage.dataset.h || 1750;
+  let s = state.scale;
+  if(state.play){
+    const vp = document.getElementById('viewport');
+    s = Math.min(vp.clientWidth / w, vp.clientHeight / h);
+  }
+  stage.style.transform = `scale(${s})`;
+  phone.style.width = (w*s) + 'px';
+  phone.style.height = (h*s) + 'px';
+}
+
+const ISSUES = [
+  {key:'btn_gold', label:'金色主按钮压缩会出接缝', desc:'左端装饰占 101/305，压到 250 宽中段被压 55px', screen:'city'},
+  {key:'bar_hp', label:'血条右端尖角被裁', desc:'填充用 overflow 裁切，右端箭头随之切断', screen:'battle'},
+  {key:'plate_name_enemy', label:'名条一端笔锋是镜像补的', desc:'原图右端被头像压住，右笔锋由左端翻转而来', screen:'battle'},
+  {key:'panel_main', label:'面板只出边框环', desc:'内部需自行铺 paper_fill，不是整块底板', screen:'pet'},
+];
+function buildIssues(){
+  const box = document.getElementById('issues');
+  box.innerHTML = '';
+  ISSUES.forEach(it => {
+    const d = document.createElement('div');
+    d.className = 'issue' + (state.screen === it.screen ? '' : ' dim');
+    d.innerHTML = `<b>${it.label}</b><span>${it.desc}</span>`;
+    d.onclick = () => { state.screen = it.screen; syncSeg(); render(); };
+    box.appendChild(d);
+  });
+}
+
+function syncSeg(){
+  document.querySelectorAll('#segScreen button').forEach(b =>
+    b.classList.toggle('on', b.dataset.s === state.screen));
+}
+
+document.querySelectorAll('#segScreen button').forEach(b => {
+  b.onclick = () => { state.screen = b.dataset.s; syncSeg(); render(); };
+});
+const bind = (id, fn) => document.getElementById(id).addEventListener('input', fn);
+bind('rScale', e => { state.scale = +e.target.value; document.getElementById('vScale').textContent = state.scale.toFixed(2); applyScale(); });
+bind('rStretch', e => {
+  state.stretch = +e.target.value;
+  document.getElementById('vStretch').textContent = Math.round(state.stretch*100) + '%';
+  render();
+});
+bind('rHp', e => {
+  state.hp = +e.target.value;
+  document.getElementById('vHp').textContent = state.hp + '%';
+  render();
+});
+document.getElementById('cBg').addEventListener('change', e => { state.bgMode = e.target.checked ? 'orig' : 'plain'; render(); });
+['cGhost:ghost','cGuides:guides','cChecker:checker','cMark:mark','cSafe:safe'].forEach(p => {
+  const [id, key] = p.split(':');
+  document.getElementById(id).addEventListener('change', e => {
+    state[key] = e.target.checked;
+    if(key === 'checker') stage.classList.toggle('checker', state.checker);
+    if(key === 'mark') stage.classList.toggle('mark', state.mark);
+    if(key === 'ghost' || key === 'guides') render();
+    if(key === 'safe'){ const s = document.getElementById('safe'); if(s) s.style.opacity = state.safe?1:0; }
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if(e.key === '1'){ state.screen='battle'; syncSeg(); render(); }
+  if(e.key === '2'){ state.screen='pet'; syncSeg(); render(); }
+  if(e.key === '3'){ state.screen='city'; syncSeg(); render(); }
+  if(e.key.toLowerCase() === 'g'){ state.ghost=!state.ghost; document.getElementById('cGhost').checked=state.ghost; render(); }
+  if(e.key.toLowerCase() === 'l'){ state.guides=!state.guides; document.getElementById('cGuides').checked=state.guides; render(); }
+});
+
+// 支持 URL 直出（供截图）：?s=pet&clean=1
+const q = new URLSearchParams(location.search);
+if(q.get('s')) state.screen = q.get('s');
+if(q.get('bg') === 'orig' || q.get('bg') === 'soft') state.bgMode = q.get('bg');
+if(q.get('shot')){
+  document.body.classList.add('shot');
+  state.safe = false;
+  document.getElementById('cSafe').checked = false;
+  state.scale = 1;
+}
+if(q.get('clean')){
+  state.safe = false;
+  document.getElementById('cSafe').checked = false;
+}
+if(q.get('scale')) state.scale = +q.get('scale');
+document.getElementById('rScale').value = state.scale;
+document.getElementById('vScale').textContent = state.scale.toFixed(2);
+
+/* =====================================================================
+   5. 游戏模式（?play=1）：铺满窗口、底栏可点、开场封面
+   ===================================================================== */
+const SCREEN_OF_NAV = ['city', 'battle', 'pet', 'city'];
+stage.addEventListener('click', e => {
+  const t = e.target.closest('[data-nav]');
+  if(!t) return;
+  const s = SCREEN_OF_NAV[+t.dataset.nav];
+  if(s && s !== state.screen){ state.screen = s; syncSeg(); render(); }
+});
+
+if(q.get('play')){
+  state.play = true; state.safe = false;
+  if(!q.get('s')) state.screen = 'city';
+  if(!q.get('bg')) state.bgMode = 'orig';
+  document.body.classList.add('play');
+  document.getElementById('cSafe').checked = false;
+}
+document.getElementById('cBg').checked = (state.bgMode === 'orig');
+
+const boot = document.getElementById('boot');
+function enterGame(){
+  if(!boot || boot.classList.contains('off')) return;
+  boot.classList.add('off');
+  setTimeout(() => { boot.style.display = 'none'; }, 620);
+}
+if(state.play && !q.get('noboot')) boot.addEventListener('click', enterGame);
+if(q.get('noboot')){ boot.classList.add('off'); boot.style.display = 'none'; }
+
+document.getElementById('launch').onclick = () => { location.search = '?play=1'; };
+document.getElementById('exitTip').onclick = () => { location.href = location.pathname; };
+window.addEventListener('resize', () => { if(state.play) applyScale(); });
+
+syncSeg();
+render();
+</script>
+</body>
+</html>
