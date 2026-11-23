@@ -5,6 +5,9 @@
 这套是给《幻灵归虚 / 水墨灵兽》客户端用的：把概念图里的 UI 拆成带 alpha 的 PNG，
 配好九宫格切边，能直接进引擎。当前基准 **1x**（900 宽设计稿）。
 
+> **三个仓库**：`huanling-client`（Godot 客户端，主交付物）· `huanling-server`（Python 服务端）·
+> `huanling-ui-kit` ← **你在这里**（UI 素材与装配验证台）。
+
 ---
 
 ## 一、先看什么
